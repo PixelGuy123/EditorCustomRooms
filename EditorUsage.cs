@@ -3,7 +3,6 @@ using HarmonyLib;
 using MTM101BaldAPI;
 using MTM101BaldAPI.AssetTools;
 using PlusLevelFormat;
-using PlusLevelLoader;
 using System.IO;
 using UnityEngine;
 using EditorCustomRooms.BasePlugin;
@@ -15,9 +14,6 @@ namespace EditorCustomRooms.Patches
 	[HarmonyPatch]
 	internal static class PrivateCallsInEditor
 	{
-		[HarmonyPatch(typeof(PlusLevelLoaderPlugin), "OnAssetsLoaded", MethodType.Enumerator)]
-		
-
 		[HarmonyPatch(typeof(PlusLevelEditor), "SpawnUI")]
 		[HarmonyPrefix]
 		static void AddMyUI() =>
