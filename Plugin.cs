@@ -1,4 +1,5 @@
 ﻿using BepInEx;
+using BepInEx.Bootstrap;
 using EditorCustomRooms.Patches;
 using HarmonyLib;
 using MTM101BaldAPI;
@@ -35,15 +36,15 @@ namespace EditorCustomRooms.BasePlugin
 
 		internal static string ModPath = string.Empty;
 
-		internal static bool hasEditor = false;
-
 
 		static void Postfix()
 		{
 			if (++assetLoadCalls != 3) return;
 
-			CreateCube("potentialDoorMarker", Color.blue, 5f, 0);
+			CreateCube("potentialDoorMarker", Color.blue, 5f, 1f);
 			CreateCube("itemSpawnMarker", Color.red, 2f, 5f);
+			CreateCube("nonSafeCellMarker", Color.green, 3f, 1f);
+			CreateCube("lightSpotMarker", Color.yellow, 3f, 10f);
 
 
 			static void CreateCube(string name, Color color, float scale, float offset)
@@ -60,7 +61,7 @@ namespace EditorCustomRooms.BasePlugin
 
 				PlusLevelLoaderPlugin.Instance.prefabAliases.Add(name, cube);
 
-				if (hasEditor)
+				if (Chainloader.PluginInfos.ContainsKey("mtm101.rulerp.baldiplus.leveleditor"))
 					EditorUsage.AddEditorfeatures(cube, name, offset);
 
 			}

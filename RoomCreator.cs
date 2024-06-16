@@ -10,10 +10,11 @@ namespace EditorCustomRooms
 {
 	public static class CustomRoomExtensions
 	{
-		public static RoomAsset GetAssetFromPath(string path, int spawnWeight, bool allCellsAreLightCells, Transform lightPre, int minItemValue, int maxItemValue, bool isOffLimits, RoomFunctionContainer existingContainer)
+		public static RoomAsset GetAssetFromPath(string path, int spawnWeight, Transform lightPre, int minItemValue, int maxItemValue, bool isOffLimits, RoomFunctionContainer existingContainer, bool isAHallway = false, bool isASecretRoom = false)
 		{
 			if (!File.Exists(path) || Path.GetExtension(path) != ".cbld")
 				throw new System.ArgumentException($"Path ({path}) is invalid! It must be a .cbld file!");
+			int idx = isAHallway ? 0 : 1;
 
 			RoomAsset rAsset;
 			using (BinaryReader reader = new(File.OpenRead(path)))
@@ -25,12 +26,12 @@ namespace EditorCustomRooms
 
 				// **************** Load Room Asset Data **************
 				// Note, everything must be stored as value, not reference; LevelAssets will be destroyed afterwards
-				// There should be only a single room per level asset (only uses rooms[1])
+				// There should be only a single room per level asset (only uses rooms[idx])
 
-				rAsset.activity = lvlAsset.rooms[1].activity.GetNew();
-				rAsset.basicObjects = new List<BasicObjectData>(lvlAsset.rooms[1].basicObjects);
-				rAsset.blockedWallCells = new List<IntVector2>(lvlAsset.rooms[1].blockedWallCells);
-				rAsset.category = lvlAsset.rooms[1].category;
+				rAsset.activity = lvlAsset.rooms[idx].activity.GetNew();
+				rAsset.basicObjects = new List<BasicObjectData>(lvlAsset.rooms[idx].basicObjects);
+				rAsset.blockedWallCells = new List<IntVector2>(lvlAsset.rooms[idx].blockedWallCells);
+				rAsset.category = lvlAsset.rooms[idx].category;
 
 				foreach (var cell in lvlAsset.tile)
 				{
@@ -38,14 +39,25 @@ namespace EditorCustomRooms
 						rAsset.cells.Add(cell);
 				}
 
-				rAsset.color = lvlAsset.rooms[1].color;
-				rAsset.doorMats = lvlAsset.rooms[1].doorMats;
-				rAsset.entitySafeCells = new List<IntVector2>(lvlAsset.rooms[1].entitySafeCells);
-				rAsset.eventSafeCells = new List<IntVector2>(lvlAsset.rooms[1].eventSafeCells);
-				rAsset.forcedDoorPositions = new List<IntVector2>(lvlAsset.rooms[1].forcedDoorPositions);
-				rAsset.hasActivity = lvlAsset.rooms[1].hasActivity;
-				rAsset.itemList = new List<WeightedItemObject>(lvlAsset.rooms[1].itemList);
-				rAsset.items = new List<ItemData>(lvlAsset.rooms[1].items);
+				rAsset.color = lvlAsset.rooms[idx].color;
+				rAsset.doorMats = lvlAsset.rooms[idx].doorMats;
+				rAsset.entitySafeCells = new List<IntVector2>(lvlAsset.rooms[idx].entitySafeCells);
+				rAsset.eventSafeCells = new List<IntVector2>(lvlAsset.rooms[idx].eventSafeCells);
+				for (int i = 0; i < rAsset.basicObjects.Count; i++)
+				{
+					var obj = rAsset.basicObjects[i];
+					if (obj.prefab.name == "nonSafeCellMarker")
+					{
+						rAsset.entitySafeCells.Remove(IntVector2.GetGridPosition(obj.position));
+						rAsset.eventSafeCells.Remove(IntVector2.GetGridPosition(obj.position));
+						rAsset.basicObjects.RemoveAt(i--);
+					}
+				}
+
+				rAsset.forcedDoorPositions = new List<IntVector2>(lvlAsset.rooms[idx].forcedDoorPositions);
+				rAsset.hasActivity = lvlAsset.rooms[idx].hasActivity;
+				rAsset.itemList = new List<WeightedItemObject>(lvlAsset.rooms[idx].itemList);
+				rAsset.items = new List<ItemData>(lvlAsset.rooms[idx].items);
 				for (int i = 0; i < rAsset.basicObjects.Count; i++)
 				{
 					var obj = rAsset.basicObjects[i];
@@ -56,10 +68,10 @@ namespace EditorCustomRooms
 					}
 				}
 
-				//rAsset.itemSpawnPoints = new(lvlAsset.rooms[1].itemSpawnPoints);
+				//rAsset.itemSpawnPoints = new(lvlAsset.rooms[idx].itemSpawnPoints);
 				rAsset.keepTextures = false;
 				rAsset.lightPre = lightPre;
-				rAsset.mapMaterial = lvlAsset.rooms[1].mapMaterial;
+				rAsset.mapMaterial = lvlAsset.rooms[idx].mapMaterial;
 				rAsset.maxItemValue = maxItemValue;
 				rAsset.minItemValue = minItemValue;
 				rAsset.offLimits = isOffLimits;
@@ -74,15 +86,26 @@ namespace EditorCustomRooms
 					}
 				}
 
-				//rAsset.potentialDoorPositions = new(lvlAsset.rooms[1].potentialDoorPositions); // Check if this works
-				rAsset.requiredDoorPositions = new List<IntVector2>(lvlAsset.rooms[1].requiredDoorPositions);
-				rAsset.secretCells = new List<IntVector2>(lvlAsset.rooms[1].secretCells); // don't know how should this be set up
+				//rAsset.potentialDoorPositions = new(lvlAsset.rooms[idx].potentialDoorPositions); // Check if this works
+				rAsset.requiredDoorPositions = new List<IntVector2>(lvlAsset.rooms[idx].requiredDoorPositions);
+				if (isASecretRoom) // secret room :O
+					rAsset.secretCells.AddRange(rAsset.cells.Select(x => x.pos));
+				else
+					rAsset.secretCells = new List<IntVector2>(lvlAsset.rooms[idx].secretCells);
+				
 				rAsset.spawnWeight = spawnWeight;
 
-				if (allCellsAreLightCells)
-					rAsset.standardLightCells.AddRange(rAsset.cells.Select(x => x.pos));
+				for (int i = 0; i < rAsset.basicObjects.Count; i++)
+				{
+					var obj = rAsset.basicObjects[i];
+					if (obj.prefab.name == "lightSpotMarker")
+					{
+						rAsset.basicObjects.RemoveAt(i--);
+						rAsset.standardLightCells.Add(IntVector2.GetGridPosition(obj.position));
+					}
+				}
 
-				rAsset.type = lvlAsset.rooms[1].type;
+				rAsset.type = lvlAsset.rooms[idx].type;
 
 				rAsset.name = $"Room_{rAsset.category}_{Path.GetFileNameWithoutExtension(path)}";
 
@@ -91,6 +114,7 @@ namespace EditorCustomRooms
 				else
 				{
 					var roomFunctionContainer = new GameObject(rAsset.name + "FunctionContainer").AddComponent<RoomFunctionContainer>();
+					roomFunctionContainer.functions = []; // For some freaking reason, this is not initialized by default
 					roomFunctionContainer.gameObject.ConvertToPrefab(true);
 
 					rAsset.roomFunctionContainer = roomFunctionContainer;
