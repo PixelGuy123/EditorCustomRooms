@@ -10,7 +10,7 @@ namespace EditorCustomRooms
 {
 	public static class CustomRoomExtensions
 	{
-		public static RoomAsset GetAssetFromPath(string path, int spawnWeight, Transform lightPre, int minItemValue, int maxItemValue, bool isOffLimits, RoomFunctionContainer existingContainer, bool isAHallway = false, bool isASecretRoom = false)
+		public static RoomAsset GetAssetFromPath(string path, int spawnWeight, Transform lightPre, int minItemValue, int maxItemValue, bool isOffLimits, RoomFunctionContainer existingContainer, bool isAHallway = false, bool isASecretRoom = false, Texture2D mapBg = null)
 		{
 			if (!File.Exists(path) || Path.GetExtension(path) != ".cbld")
 				throw new System.ArgumentException($"Path ({path}) is invalid! It must be a .cbld file!");
@@ -35,22 +35,30 @@ namespace EditorCustomRooms
 
 				foreach (var cell in lvlAsset.tile)
 				{
-					if (cell.type < 16 && cell.roomId == 1)
+					if (cell.roomId == idx && cell.type != 16)
 						rAsset.cells.Add(cell);
 				}
+				var posList = rAsset.cells.ConvertAll(x => x.pos);
+
+
+
 
 				rAsset.color = lvlAsset.rooms[idx].color;
 				rAsset.doorMats = lvlAsset.rooms[idx].doorMats;
-				rAsset.entitySafeCells = new List<IntVector2>(lvlAsset.rooms[idx].entitySafeCells);
-				rAsset.eventSafeCells = new List<IntVector2>(lvlAsset.rooms[idx].eventSafeCells);
-				for (int i = 0; i < rAsset.basicObjects.Count; i++)
+				if (!isAHallway) // No safe cell for a hallway
 				{
-					var obj = rAsset.basicObjects[i];
-					if (obj.prefab.name == "nonSafeCellMarker")
+					rAsset.entitySafeCells = new List<IntVector2>(posList);
+					rAsset.eventSafeCells = new List<IntVector2>(posList); // Ignore editor's implementation of this, it's horrible and the green marker should work better
+					for (int i = 0; i < rAsset.basicObjects.Count; i++)
 					{
-						rAsset.entitySafeCells.Remove(IntVector2.GetGridPosition(obj.position));
-						rAsset.eventSafeCells.Remove(IntVector2.GetGridPosition(obj.position));
-						rAsset.basicObjects.RemoveAt(i--);
+						var obj = rAsset.basicObjects[i];
+						if (obj.prefab.name == "nonSafeCellMarker")
+						{
+							var pos = IntVector2.GetGridPosition(obj.position);
+							rAsset.entitySafeCells.Remove(pos);
+							rAsset.eventSafeCells.Remove(pos);
+							rAsset.basicObjects.RemoveAt(i--);
+						}
 					}
 				}
 
@@ -76,23 +84,29 @@ namespace EditorCustomRooms
 				rAsset.minItemValue = minItemValue;
 				rAsset.offLimits = isOffLimits;
 
-				for (int i = 0; i < rAsset.basicObjects.Count; i++)
+				if (!isAHallway)
 				{
-					var obj = rAsset.basicObjects[i];
-					if (obj.prefab.name == "potentialDoorMarker")
+					for (int i = 0; i < rAsset.basicObjects.Count; i++)
 					{
-						rAsset.basicObjects.RemoveAt(i--);
-						rAsset.potentialDoorPositions.Add(IntVector2.GetGridPosition(obj.position));
+						var obj = rAsset.basicObjects[i];
+						if (obj.prefab.name == "potentialDoorMarker")
+						{
+							rAsset.basicObjects.RemoveAt(i--);
+							rAsset.potentialDoorPositions.Add(IntVector2.GetGridPosition(obj.position));
+						}
+						else if (obj.prefab.name == "forcedDoorMarker")
+						{
+							rAsset.basicObjects.RemoveAt(i--);
+							rAsset.forcedDoorPositions.Add(IntVector2.GetGridPosition(obj.position));
+						}
 					}
 				}
-
-				//rAsset.potentialDoorPositions = new(lvlAsset.rooms[idx].potentialDoorPositions); // Check if this works
 				rAsset.requiredDoorPositions = new List<IntVector2>(lvlAsset.rooms[idx].requiredDoorPositions);
 				if (isASecretRoom) // secret room :O
 					rAsset.secretCells.AddRange(rAsset.cells.Select(x => x.pos));
 				else
 					rAsset.secretCells = new List<IntVector2>(lvlAsset.rooms[idx].secretCells);
-				
+
 				rAsset.spawnWeight = spawnWeight;
 
 				for (int i = 0; i < rAsset.basicObjects.Count; i++)
@@ -111,7 +125,7 @@ namespace EditorCustomRooms
 
 				if (existingContainer)
 					rAsset.roomFunctionContainer = existingContainer;
-				else
+				else if (!isAHallway) // No container for hallway
 				{
 					var roomFunctionContainer = new GameObject(rAsset.name + "FunctionContainer").AddComponent<RoomFunctionContainer>();
 					roomFunctionContainer.functions = []; // For some freaking reason, this is not initialized by default
@@ -119,6 +133,19 @@ namespace EditorCustomRooms
 
 					rAsset.roomFunctionContainer = roomFunctionContainer;
 				}
+
+				if (mapBg != null)
+				{
+					rAsset.mapMaterial = new(rAsset.mapMaterial);
+					rAsset.mapMaterial.SetTexture("_MapBackground", mapBg);
+					rAsset.mapMaterial.SetShaderKeywords(["_KEYMAPSHOWBACKGROUND_ON"]);
+					rAsset.mapMaterial.name = rAsset.name;
+				}
+				else if (isAHallway)
+					rAsset.mapMaterial = null; // hallways have no material
+
+
+				
 
 
 				Object.Destroy(lvlAsset); // Remove the created level asset from memory

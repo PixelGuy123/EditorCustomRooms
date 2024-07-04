@@ -16,7 +16,7 @@ namespace EditorCustomRooms.Patches
 		[HarmonyPatch(typeof(PlusLevelEditor), "SpawnUI")]
 		[HarmonyPrefix]
 		static void AddMyUI() =>
-			PlusLevelEditor.Instance.toolCats.Find(x => x.name == "utilities").tools.AddRange(EditorUsage.cubes.Select(x => new RotateAndPlacePrefab(x)));
+			PlusLevelEditor.Instance.toolCats.Find(x => x.name == "utilities").tools.AddRange(EditorUsage.cubes.Select(x => new ObjectTool(x)));
 		
 
 	}
