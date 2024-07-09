@@ -27,7 +27,6 @@ namespace EditorCustomRooms.BasePlugin
 			}
 			catch
 			{
-				Debug.LogWarning("Mod has crashed due to the editor missing");
 			}
 			finally
 			{
