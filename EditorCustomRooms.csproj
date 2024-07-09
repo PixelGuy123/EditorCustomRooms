@@ -3,10 +3,19 @@
   <PropertyGroup>
     <TargetFramework>net46</TargetFramework>
     <AssemblyName>EditorCustomRooms</AssemblyName>
-    <Description>My first plugin</Description>
+    <Description>Creates custom rooms using LevelLoader</Description>
     <Version>1.0.0</Version>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <LangVersion>latest</LangVersion>
+    <GenerateDocumentationFile>True</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <DebugType>portable</DebugType>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <DebugType>portable</DebugType>
   </PropertyGroup>
 
   <ItemGroup>
@@ -43,6 +52,6 @@
   </ItemGroup>
   
   <Target Name="PostBuild" AfterTargets="PostBuildEvent">
-    <Exec Command="copy /y &quot;$(OutputPath)$(AssemblyName).dll&quot; &quot;C:\Program Files (x86)\Steam\steamapps\common\Baldi's Basics Plus\BepInEx\plugins&quot;&#xD;&#xA;copy /y &quot;$(OutputPath)$(AssemblyName).pdb&quot; &quot;C:\Program Files (x86)\Steam\steamapps\common\Baldi's Basics Plus\BepInEx\plugins&quot;" />
+    <Exec Command="copy /y &quot;$(OutputPath)$(AssemblyName).dll&quot; &quot;C:\Program Files (x86)\Steam\steamapps\common\Baldi's Basics Plus\BepInEx\plugins&quot;&#xD;&#xA;copy /y &quot;$(OutputPath)$(AssemblyName).pdb&quot; &quot;C:\Program Files (x86)\Steam\steamapps\common\Baldi's Basics Plus\BepInEx\plugins&quot;&#xD;&#xA;copy /y &quot;$(OutputPath)$(AssemblyName).xml&quot; &quot;C:\Program Files (x86)\Steam\steamapps\common\Baldi's Basics Plus\BepInEx\plugins&quot;" />
   </Target>
 </Project>

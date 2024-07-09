@@ -8,9 +8,27 @@ using UnityEngine;
 
 namespace EditorCustomRooms
 {
+	/// <summary>
+	/// A static class to hold extensions related to the custom rooms.
+	/// </summary>
 	public static class CustomRoomExtensions
 	{
-		public static RoomAsset GetAssetFromPath(string path, int spawnWeight, Transform lightPre, int minItemValue, int maxItemValue, bool isOffLimits, RoomFunctionContainer existingContainer, bool isAHallway = false, bool isASecretRoom = false, Texture2D mapBg = null)
+		/// <summary>
+		/// Creates a <see cref="RoomAsset"/> object based on the provided .cbld file.
+		/// </summary>
+		/// <param name="path">The path to the required .cbld file.</param>
+		/// <param name="lightPre">The light object that represents the light source of the room. Setting null will use the default ceiling light lamp.</param>
+		/// <param name="maxItemValue">The maximum starting value of the room to "afford" an item to appear inside the room.</param>
+		/// <param name="isOffLimits">If the room is off limits (for example, an elevator).</param>
+		/// <param name="existingContainer">The <see cref="RoomFunctionContainer"/> of a RoomAsset. Generally, every BB+ room points to a single Container of their collection, for example, Faculty has a single container shared to every asset that is supposed to be a faculty. Leaving this null will result in the creation of a unique container for the room.
+		/// <para>If the asset shouldn't have a container, it can be manually destroyed after the creation of the RoomAsset.</para>
+		/// </param>
+		/// <param name="isAHallway">If True, the asset will follow specific parameters to match a hallway format.</param>
+		/// <param name="isASecretRoom">If True, every tile in the room will be marked as secret. Like the Mystery Room.</param>
+		/// <param name="mapBg">The background image that appears over the room in the Advanced Map. Leaving null will make the asset use the default map material, with no background animation.</param>
+		/// <returns>A new instance of a <see cref="RoomAsset"/></returns>
+		/// <exception cref="System.ArgumentException"></exception>
+		public static RoomAsset GetAssetFromPath(string path, Transform lightPre, int maxItemValue, bool isOffLimits, RoomFunctionContainer existingContainer = null, bool isAHallway = false, bool isASecretRoom = false, Texture2D mapBg = null)
 		{
 			if (!File.Exists(path) || Path.GetExtension(path) != ".cbld")
 				throw new System.ArgumentException($"Path ({path}) is invalid! It must be a .cbld file!");
@@ -81,7 +99,6 @@ namespace EditorCustomRooms
 				rAsset.lightPre = lightPre;
 				rAsset.mapMaterial = lvlAsset.rooms[idx].mapMaterial;
 				rAsset.maxItemValue = maxItemValue;
-				rAsset.minItemValue = minItemValue;
 				rAsset.offLimits = isOffLimits;
 
 				if (!isAHallway)
@@ -106,8 +123,6 @@ namespace EditorCustomRooms
 					rAsset.secretCells.AddRange(rAsset.cells.Select(x => x.pos));
 				else
 					rAsset.secretCells = new List<IntVector2>(lvlAsset.rooms[idx].secretCells);
-
-				rAsset.spawnWeight = spawnWeight;
 
 				for (int i = 0; i < rAsset.basicObjects.Count; i++)
 				{
@@ -151,41 +166,6 @@ namespace EditorCustomRooms
 				Object.Destroy(lvlAsset); // Remove the created level asset from memory
 			}
 			return rAsset;
-		}
-
-		public static RoomAsset SetPotentialPosters(this RoomAsset asset, float posterChance, params WeightedPosterObject[] posters)
-		{
-			asset.posterChance = posterChance;
-			asset.posters = new List<WeightedPosterObject>(posters);
-			return asset;
-		}
-
-		public static RoomAsset SetPotentialWindows(this RoomAsset asset, float windowChance, WindowObject window)
-		{
-			asset.windowChance = windowChance;
-			asset.windowObject = window;
-			return asset;
-		}
-
-		public static RoomAsset SetMats(this RoomAsset asset, Material ceil, Material wall, Material floor)
-		{
-			if (ceil)
-			{
-				asset.ceilMat = new Material(ceil);
-				asset.ceilTex = Object.Instantiate((Texture2D)ceil.mainTexture);
-			}
-			if (wall)
-			{
-				asset.wallMat = new Material(wall);
-				asset.wallTex = Object.Instantiate((Texture2D)wall.mainTexture);
-			}
-			if (floor)
-			{
-				asset.florMat = new Material(floor);
-				asset.florTex = Object.Instantiate((Texture2D)floor.mainTexture);
-			}
-			asset.keepTextures = asset.florMat && asset.wallMat && asset.ceilMat;
-			return asset;
 		}
 
 	}
