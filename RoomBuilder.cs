@@ -9,9 +9,9 @@ using UnityEngine;
 namespace EditorCustomRooms
 {
 	/// <summary>
-	/// A static class to hold extensions related to the custom rooms.
+	/// A builder class to take care of the <see cref="RoomAsset"/> creation.
 	/// </summary>
-	public static class CustomRoomExtensions
+	public static class RoomFactory
 	{
 		/// <summary>
 		/// Creates a <see cref="RoomAsset"/> object based on the provided .cbld file.
@@ -26,12 +26,12 @@ namespace EditorCustomRooms
 		/// <param name="isAHallway">If True, the asset will follow specific parameters to match a hallway format.</param>
 		/// <param name="isASecretRoom">If True, every tile in the room will be marked as secret. Like the Mystery Room.</param>
 		/// <param name="mapBg">The background image that appears over the room in the Advanced Map. Leaving null will make the asset use the default map material, with no background animation.</param>
+		/// <param name="keepTextures">If True, when passed to the generator, it won't change its textures if it's a potential classroom/faculty/office type.</param>
 		/// <returns>A new instance of a <see cref="RoomAsset"/></returns>
 		/// <exception cref="System.ArgumentException"></exception>
-		public static RoomAsset GetAssetFromPath(string path, Transform lightPre, int maxItemValue, bool isOffLimits, RoomFunctionContainer existingContainer = null, bool isAHallway = false, bool isASecretRoom = false, Texture2D mapBg = null)
+		public static RoomAsset CreateAssetFromPath(string path, Transform lightPre, int maxItemValue, bool isOffLimits, RoomFunctionContainer existingContainer = null, bool isAHallway = false, bool isASecretRoom = false, Texture2D mapBg = null, bool keepTextures = true)
 		{
-			if (!File.Exists(path) || Path.GetExtension(path) != ".cbld")
-				throw new System.ArgumentException($"Path ({path}) is invalid! It must be a .cbld file!");
+
 			int idx = isAHallway ? 0 : 1;
 
 			RoomAsset rAsset;
@@ -63,22 +63,24 @@ namespace EditorCustomRooms
 
 				rAsset.color = lvlAsset.rooms[idx].color;
 				rAsset.doorMats = lvlAsset.rooms[idx].doorMats;
-				if (!isAHallway) // No safe cell for a hallway
+
+				rAsset.entitySafeCells = new List<IntVector2>(posList);
+				rAsset.eventSafeCells = new List<IntVector2>(posList); // Ignore editor's implementation of this, it's horrible and the green marker should work better
+				for (int i = 0; i < rAsset.basicObjects.Count; i++)
 				{
-					rAsset.entitySafeCells = new List<IntVector2>(posList);
-					rAsset.eventSafeCells = new List<IntVector2>(posList); // Ignore editor's implementation of this, it's horrible and the green marker should work better
-					for (int i = 0; i < rAsset.basicObjects.Count; i++)
+					var obj = rAsset.basicObjects[i];
+					if (obj.prefab.name == "nonSafeCellMarker")
 					{
-						var obj = rAsset.basicObjects[i];
-						if (obj.prefab.name == "nonSafeCellMarker")
+						var pos = IntVector2.GetGridPosition(obj.position);
+						if (!isAHallway)
 						{
-							var pos = IntVector2.GetGridPosition(obj.position);
 							rAsset.entitySafeCells.Remove(pos);
 							rAsset.eventSafeCells.Remove(pos);
-							rAsset.basicObjects.RemoveAt(i--);
 						}
+						rAsset.basicObjects.RemoveAt(i--);
 					}
 				}
+
 
 				rAsset.forcedDoorPositions = new List<IntVector2>(lvlAsset.rooms[idx].forcedDoorPositions);
 				rAsset.hasActivity = lvlAsset.rooms[idx].hasActivity;
@@ -94,31 +96,34 @@ namespace EditorCustomRooms
 					}
 				}
 
-				//rAsset.itemSpawnPoints = new(lvlAsset.rooms[idx].itemSpawnPoints);
-				rAsset.keepTextures = false;
+				rAsset.keepTextures = keepTextures;
+				rAsset.ceilTex = lvlAsset.rooms[idx].ceilTex;
+				rAsset.florTex = lvlAsset.rooms[idx].florTex;
+				rAsset.wallTex = lvlAsset.rooms[idx].wallTex;
 				rAsset.lightPre = lightPre;
 				rAsset.mapMaterial = lvlAsset.rooms[idx].mapMaterial;
 				rAsset.maxItemValue = maxItemValue;
 				rAsset.offLimits = isOffLimits;
 
-				if (!isAHallway)
+
+				for (int i = 0; i < rAsset.basicObjects.Count; i++)
 				{
-					for (int i = 0; i < rAsset.basicObjects.Count; i++)
+					var obj = rAsset.basicObjects[i];
+					if (obj.prefab.name == "potentialDoorMarker")
 					{
-						var obj = rAsset.basicObjects[i];
-						if (obj.prefab.name == "potentialDoorMarker")
-						{
+						if (!isAHallway)
 							rAsset.basicObjects.RemoveAt(i--);
-							rAsset.potentialDoorPositions.Add(IntVector2.GetGridPosition(obj.position));
-						}
-						else if (obj.prefab.name == "forcedDoorMarker")
-						{
+						rAsset.potentialDoorPositions.Add(IntVector2.GetGridPosition(obj.position));
+					}
+					else if (obj.prefab.name == "forcedDoorMarker")
+					{
+						if (!isAHallway)
 							rAsset.basicObjects.RemoveAt(i--);
-							rAsset.forcedDoorPositions.Add(IntVector2.GetGridPosition(obj.position));
-						}
+						rAsset.forcedDoorPositions.Add(IntVector2.GetGridPosition(obj.position));
 					}
 				}
-				rAsset.requiredDoorPositions = new List<IntVector2>(lvlAsset.rooms[idx].requiredDoorPositions);
+
+				rAsset.requiredDoorPositions = new List<IntVector2>(lvlAsset.rooms[idx].requiredDoorPositions); // It seems required has a higher priority than forced, but has no apparent difference
 				if (isASecretRoom) // secret room :O
 					rAsset.secretCells.AddRange(rAsset.cells.Select(x => x.pos));
 				else
@@ -139,7 +144,9 @@ namespace EditorCustomRooms
 				rAsset.name = $"Room_{rAsset.category}_{Path.GetFileNameWithoutExtension(path)}";
 
 				if (existingContainer)
+				{
 					rAsset.roomFunctionContainer = existingContainer;
+				}
 				else if (!isAHallway) // No container for hallway
 				{
 					var roomFunctionContainer = new GameObject(rAsset.name + "FunctionContainer").AddComponent<RoomFunctionContainer>();
@@ -158,10 +165,6 @@ namespace EditorCustomRooms
 				}
 				else if (isAHallway)
 					rAsset.mapMaterial = null; // hallways have no material
-
-
-				
-
 
 				Object.Destroy(lvlAsset); // Remove the created level asset from memory
 			}

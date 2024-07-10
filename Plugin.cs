@@ -4,7 +4,9 @@ using EditorCustomRooms.Patches;
 using HarmonyLib;
 using MTM101BaldAPI;
 using MTM101BaldAPI.AssetTools;
+using MTM101BaldAPI.Registers;
 using PlusLevelLoader;
+using System.Linq;
 using UnityEngine;
 
 namespace EditorCustomRooms.BasePlugin
