@@ -54,7 +54,12 @@ namespace EditorCustomRooms
 				foreach (var cell in lvlAsset.tile)
 				{
 					if (cell.roomId == idx && cell.type != 16)
+					{
+						if (isAHallway)
+							cell.type = 0;
+
 						rAsset.cells.Add(cell);
+					}
 				}
 				var posList = rAsset.cells.ConvertAll(x => x.pos);
 

@@ -4,14 +4,12 @@ using EditorCustomRooms.Patches;
 using HarmonyLib;
 using MTM101BaldAPI;
 using MTM101BaldAPI.AssetTools;
-using MTM101BaldAPI.Registers;
 using PlusLevelLoader;
-using System.Linq;
 using UnityEngine;
 
 namespace EditorCustomRooms.BasePlugin
 {
-	[BepInPlugin("pixelguy.pixelmodding.baldiplus.editorcustomrooms", PluginInfo.PLUGIN_NAME, PluginInfo.PLUGIN_VERSION)]
+	[BepInPlugin("pixelguy.pixelmodding.baldiplus.editorcustomrooms", PluginInfo.PLUGIN_NAME, "1.0.1")]
 	[BepInDependency("mtm101.rulerp.bbplus.baldidevapi", BepInDependency.DependencyFlags.HardDependency)]
 	[BepInDependency("mtm101.rulerp.baldiplus.levelloader", BepInDependency.DependencyFlags.HardDependency)]
 	[BepInDependency("mtm101.rulerp.baldiplus.leveleditor", BepInDependency.DependencyFlags.SoftDependency)]
