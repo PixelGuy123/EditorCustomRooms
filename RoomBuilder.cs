@@ -17,7 +17,6 @@ namespace EditorCustomRooms
 		/// Creates a <see cref="RoomAsset"/> object based on the provided .cbld file.
 		/// </summary>
 		/// <param name="path">The path to the required .cbld file.</param>
-		/// <param name="lightPre">The light object that represents the light source of the room. Setting null will use the default ceiling light lamp.</param>
 		/// <param name="maxItemValue">The maximum starting value of the room to "afford" an item to appear inside the room.</param>
 		/// <param name="isOffLimits">If the room is off limits (for example, an elevator).</param>
 		/// <param name="existingContainer">The <see cref="RoomFunctionContainer"/> of a RoomAsset. Generally, every BB+ room points to a single Container of their collection, for example, Faculty has a single container shared to every asset that is supposed to be a faculty. Leaving this null will result in the creation of a unique container for the room.
@@ -29,7 +28,7 @@ namespace EditorCustomRooms
 		/// <param name="keepTextures">If True, when passed to the generator, it won't change its textures if it's a potential classroom/faculty/office type.</param>
 		/// <returns>A new instance of a <see cref="RoomAsset"/></returns>
 		/// <exception cref="System.ArgumentException"></exception>
-		public static RoomAsset CreateAssetFromPath(string path, Transform lightPre, int maxItemValue, bool isOffLimits, RoomFunctionContainer existingContainer = null, bool isAHallway = false, bool isASecretRoom = false, Texture2D mapBg = null, bool keepTextures = true)
+		public static RoomAsset CreateAssetFromPath(string path, int maxItemValue, bool isOffLimits, RoomFunctionContainer existingContainer = null, bool isAHallway = false, bool isASecretRoom = false, Texture2D mapBg = null, bool keepTextures = true)
 		{
 
 			int idx = isAHallway ? 0 : 1;
@@ -105,7 +104,6 @@ namespace EditorCustomRooms
 				rAsset.ceilTex = lvlAsset.rooms[idx].ceilTex;
 				rAsset.florTex = lvlAsset.rooms[idx].florTex;
 				rAsset.wallTex = lvlAsset.rooms[idx].wallTex;
-				rAsset.lightPre = lightPre;
 				rAsset.mapMaterial = lvlAsset.rooms[idx].mapMaterial;
 				rAsset.maxItemValue = maxItemValue;
 				rAsset.offLimits = isOffLimits;
