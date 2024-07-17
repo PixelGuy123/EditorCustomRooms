@@ -9,7 +9,7 @@ using UnityEngine;
 
 namespace EditorCustomRooms.BasePlugin
 {
-	[BepInPlugin("pixelguy.pixelmodding.baldiplus.editorcustomrooms", PluginInfo.PLUGIN_NAME, "1.0.1")]
+	[BepInPlugin("pixelguy.pixelmodding.baldiplus.editorcustomrooms", PluginInfo.PLUGIN_NAME, "1.0.2")]
 	[BepInDependency("mtm101.rulerp.bbplus.baldidevapi", BepInDependency.DependencyFlags.HardDependency)]
 	[BepInDependency("mtm101.rulerp.baldiplus.levelloader", BepInDependency.DependencyFlags.HardDependency)]
 	[BepInDependency("mtm101.rulerp.baldiplus.leveleditor", BepInDependency.DependencyFlags.SoftDependency)]
@@ -55,7 +55,7 @@ namespace EditorCustomRooms.BasePlugin
 			{
 
 				var cube = GameObject.CreatePrimitive(PrimitiveType.Cube);
-				Destroy(cube.GetComponent<Collider>()); // No collision required
+				DestroyImmediate(cube.GetComponentInChildren<Collider>()); // No collision required
 				var renderer = cube.GetComponent<MeshRenderer>();
 				renderer.material.shader = Shader.Find("Unlit/Color");
 				renderer.material.color = color;

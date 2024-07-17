@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using UnityEngine;
+using UnityEngine.Assertions;
 
 namespace EditorCustomRooms
 {
@@ -145,6 +146,7 @@ namespace EditorCustomRooms
 				rAsset.type = lvlAsset.rooms[idx].type;
 
 				rAsset.name = $"Room_{rAsset.category}_{Path.GetFileNameWithoutExtension(path)}";
+				((Object)rAsset).name = rAsset.name;
 
 				if (existingContainer)
 				{
