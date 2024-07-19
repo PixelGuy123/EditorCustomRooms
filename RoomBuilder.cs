@@ -1,11 +1,11 @@
 ﻿using MTM101BaldAPI;
 using PlusLevelFormat;
 using PlusLevelLoader;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using UnityEngine;
-using UnityEngine.Assertions;
 
 namespace EditorCustomRooms
 {
@@ -27,9 +27,10 @@ namespace EditorCustomRooms
 		/// <param name="isASecretRoom">If True, every tile in the room will be marked as secret. Like the Mystery Room.</param>
 		/// <param name="mapBg">The background image that appears over the room in the Advanced Map. Leaving null will make the asset use the default map material, with no background animation.</param>
 		/// <param name="keepTextures">If True, when passed to the generator, it won't change its textures if it's a potential classroom/faculty/office type.</param>
+		/// <param name="squaredShape">If True, the room will (internally) turn into a square shape. This is highly recommended for loading Special Rooms.</param>
 		/// <returns>A new instance of a <see cref="RoomAsset"/></returns>
-		/// <exception cref="System.ArgumentException"></exception>
-		public static RoomAsset CreateAssetFromPath(string path, int maxItemValue, bool isOffLimits, RoomFunctionContainer existingContainer = null, bool isAHallway = false, bool isASecretRoom = false, Texture2D mapBg = null, bool keepTextures = true)
+		/// <exception cref="ArgumentException"></exception>
+		public static RoomAsset CreateAssetFromPath(string path, int maxItemValue, bool isOffLimits, RoomFunctionContainer existingContainer = null, bool isAHallway = false, bool isASecretRoom = false, Texture2D mapBg = null, bool keepTextures = true, bool squaredShape = false)
 		{
 
 			int idx = isAHallway ? 0 : 1;
@@ -51,6 +52,8 @@ namespace EditorCustomRooms
 				rAsset.blockedWallCells = new List<IntVector2>(lvlAsset.rooms[idx].blockedWallCells);
 				rAsset.category = lvlAsset.rooms[idx].category;
 
+				IntVector2 biggestSize = default;
+
 				foreach (var cell in lvlAsset.tile)
 				{
 					if (cell.roomId == idx && cell.type != 16)
@@ -59,10 +62,11 @@ namespace EditorCustomRooms
 							cell.type = 0;
 
 						rAsset.cells.Add(cell);
+						if (biggestSize.x < cell.pos.x || biggestSize.z < cell.pos.z)
+							biggestSize = cell.pos;
 					}
 				}
 				var posList = rAsset.cells.ConvertAll(x => x.pos);
-
 
 
 
@@ -113,17 +117,24 @@ namespace EditorCustomRooms
 				for (int i = 0; i < rAsset.basicObjects.Count; i++)
 				{
 					var obj = rAsset.basicObjects[i];
+					var pos = IntVector2.GetGridPosition(obj.position);
 					if (obj.prefab.name == "potentialDoorMarker")
 					{
+						rAsset.basicObjects.RemoveAt(i--);
 						if (!isAHallway)
-							rAsset.basicObjects.RemoveAt(i--);
-						rAsset.potentialDoorPositions.Add(IntVector2.GetGridPosition(obj.position));
+						{
+							rAsset.potentialDoorPositions.Add(pos);
+							rAsset.blockedWallCells.Remove(pos);
+						}
 					}
 					else if (obj.prefab.name == "forcedDoorMarker")
 					{
+						rAsset.basicObjects.RemoveAt(i--);
 						if (!isAHallway)
-							rAsset.basicObjects.RemoveAt(i--);
-						rAsset.forcedDoorPositions.Add(IntVector2.GetGridPosition(obj.position));
+						{
+							rAsset.forcedDoorPositions.Add(pos);
+							rAsset.blockedWallCells.Remove(pos);
+						}
 					}
 				}
 
@@ -146,7 +157,7 @@ namespace EditorCustomRooms
 				rAsset.type = lvlAsset.rooms[idx].type;
 
 				rAsset.name = $"Room_{rAsset.category}_{Path.GetFileNameWithoutExtension(path)}";
-				((Object)rAsset).name = rAsset.name;
+				((UnityEngine.Object)rAsset).name = rAsset.name;
 
 				if (existingContainer)
 				{
@@ -171,7 +182,23 @@ namespace EditorCustomRooms
 				else if (isAHallway)
 					rAsset.mapMaterial = null; // hallways have no material
 
-				Object.Destroy(lvlAsset); // Remove the created level asset from memory
+				if (squaredShape && biggestSize.z > 0 && biggestSize.x > 0 && !isAHallway) // Fillup empty spots
+				{
+					for (int x = 0; x <= biggestSize.x; x++)
+					{
+						for (int z = 0; z <= biggestSize.z; z++)
+						{
+							IntVector2 pos = new(x, z);
+							if (!rAsset.cells.Any(x => x.pos == pos))
+							{
+								rAsset.cells.Add(new() { pos = pos });
+								rAsset.secretCells.Add(pos);
+							}
+						}
+					}
+				}
+
+				UnityEngine.Object.Destroy(lvlAsset); // Remove the created level asset from memory
 			}
 			return rAsset;
 		}
