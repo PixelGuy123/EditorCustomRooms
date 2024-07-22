@@ -62,8 +62,11 @@ namespace EditorCustomRooms
 							cell.type = 0;
 
 						rAsset.cells.Add(cell);
-						if (biggestSize.x < cell.pos.x || biggestSize.z < cell.pos.z)
-							biggestSize = cell.pos;
+						if (biggestSize.x < cell.pos.x) // Separated each axis, to actually give a square shape
+							biggestSize.x = cell.pos.x;
+
+						if (biggestSize.z < cell.pos.z)
+							biggestSize.z = cell.pos.z;
 					}
 				}
 				var posList = rAsset.cells.ConvertAll(x => x.pos);
