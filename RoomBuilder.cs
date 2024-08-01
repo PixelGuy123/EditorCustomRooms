@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using UnityEngine;
+using UnityEngine.UIElements;
 
 namespace EditorCustomRooms
 {
@@ -53,14 +54,30 @@ namespace EditorCustomRooms
 				rAsset.category = lvlAsset.rooms[idx].category;
 
 				IntVector2 biggestSize = default;
+				IntVector2 posOffset = new(lvlAsset.levelSize.x, lvlAsset.levelSize.z);
 
 				foreach (var cell in lvlAsset.tile)
 				{
 					if (cell.roomId == idx && cell.type != 16)
 					{
+						if (posOffset.x > cell.pos.x)
+							posOffset.x = cell.pos.x;
+
+						if (posOffset.z > cell.pos.z)
+							posOffset.z = cell.pos.z;
+
 						if (isAHallway)
 							cell.type = 0;
+					}
+				}
 
+				Vector3 worldPosOffset = new(posOffset.x * 10f, 0f, posOffset.z * 10f);
+
+				foreach (var cell in lvlAsset.tile)
+				{
+					if (cell.roomId == idx && cell.type != 16)
+					{
+						cell.pos -= posOffset; // Offset that should make a room be in 0,0 regardless
 						rAsset.cells.Add(cell);
 						if (biggestSize.x < cell.pos.x) // Separated each axis, to actually give a square shape
 							biggestSize.x = cell.pos.x;
@@ -78,35 +95,12 @@ namespace EditorCustomRooms
 
 				rAsset.entitySafeCells = new List<IntVector2>(posList);
 				rAsset.eventSafeCells = new List<IntVector2>(posList); // Ignore editor's implementation of this, it's horrible and the green marker should work better
-				for (int i = 0; i < rAsset.basicObjects.Count; i++)
-				{
-					var obj = rAsset.basicObjects[i];
-					if (obj.prefab.name == "nonSafeCellMarker")
-					{
-						var pos = IntVector2.GetGridPosition(obj.position);
-						if (!isAHallway)
-						{
-							rAsset.entitySafeCells.Remove(pos);
-							rAsset.eventSafeCells.Remove(pos);
-						}
-						rAsset.basicObjects.RemoveAt(i--);
-					}
-				}
 
 
 				rAsset.forcedDoorPositions = new List<IntVector2>(lvlAsset.rooms[idx].forcedDoorPositions);
 				rAsset.hasActivity = lvlAsset.rooms[idx].hasActivity;
 				rAsset.itemList = new List<WeightedItemObject>(lvlAsset.rooms[idx].itemList);
 				rAsset.items = new List<ItemData>(lvlAsset.rooms[idx].items);
-				for (int i = 0; i < rAsset.basicObjects.Count; i++)
-				{
-					var obj = rAsset.basicObjects[i];
-					if (obj.prefab.name == "itemSpawnMarker")
-					{
-						rAsset.basicObjects.RemoveAt(i--);
-						rAsset.itemSpawnPoints.Add(new ItemSpawnPoint() { weight = 50, position = new Vector2(obj.position.x, obj.position.z) });
-					}
-				}
 
 				rAsset.keepTextures = keepTextures;
 				rAsset.ceilTex = lvlAsset.rooms[idx].ceilTex;
@@ -116,27 +110,67 @@ namespace EditorCustomRooms
 				rAsset.maxItemValue = maxItemValue;
 				rAsset.offLimits = isOffLimits;
 
+				for (int i = 0; i < rAsset.basicObjects.Count; i++)
+					rAsset.basicObjects[i].position -= worldPosOffset;
+				for (int i = 0; i < rAsset.blockedWallCells.Count; i++)
+					rAsset.blockedWallCells[i] -= posOffset;
+				for (int i = 0; i < rAsset.items.Count; i++)
+					rAsset.items[i].position -= new Vector2(worldPosOffset.x, worldPosOffset.z);
+				rAsset.activity.position -= worldPosOffset;
 
+				// other markers here
 				for (int i = 0; i < rAsset.basicObjects.Count; i++)
 				{
-					var obj = rAsset.basicObjects[i];
-					var pos = IntVector2.GetGridPosition(obj.position);
-					if (obj.prefab.name == "potentialDoorMarker")
+					var pos = IntVector2.GetGridPosition(rAsset.basicObjects[i].position);
+					Vector3 actPos = rAsset.basicObjects[i].position;
+					switch (rAsset.basicObjects[i].prefab.name)
+					{
+						case "lightSpotMarker":
+							rAsset.basicObjects.RemoveAt(i--);
+							rAsset.standardLightCells.Add(pos);
+							break;
+						case "itemSpawnMarker":
+							rAsset.basicObjects.RemoveAt(i--);
+							rAsset.itemSpawnPoints.Add(new ItemSpawnPoint() { weight = 50, position = new Vector2(actPos.x, actPos.z) });
+							break;
+						case "nonSafeCellMarker":
+							if (!isAHallway)
+							{
+								rAsset.entitySafeCells.Remove(pos);
+								rAsset.eventSafeCells.Remove(pos);
+							}
+							rAsset.basicObjects.RemoveAt(i--);
+						break;
+						default: break;
+					}
+				}
+				// Potential doors
+				for (int i = 0; i < rAsset.basicObjects.Count; i++)
+				{
+					var pos = IntVector2.GetGridPosition(rAsset.basicObjects[i].position);
+					if (rAsset.basicObjects[i].prefab.name == "potentialDoorMarker")
 					{
 						rAsset.basicObjects.RemoveAt(i--);
 						if (!isAHallway)
 						{
 							rAsset.potentialDoorPositions.Add(pos);
-							rAsset.blockedWallCells.Remove(pos);
+							if (!rAsset.basicObjects.Any(x => IntVector2.GetGridPosition(x.position) == pos))
+								rAsset.blockedWallCells.Remove(pos);
 						}
 					}
-					else if (obj.prefab.name == "forcedDoorMarker")
+				}
+				// Forced doors
+				for (int i = 0; i < rAsset.basicObjects.Count; i++)
+				{
+					var pos = IntVector2.GetGridPosition(rAsset.basicObjects[i].position);
+					if (rAsset.basicObjects[i].prefab.name == "forcedDoorMarker")
 					{
 						rAsset.basicObjects.RemoveAt(i--);
 						if (!isAHallway)
 						{
 							rAsset.forcedDoorPositions.Add(pos);
-							rAsset.blockedWallCells.Remove(pos);
+							if (!rAsset.basicObjects.Any(x => IntVector2.GetGridPosition(x.position) == pos))
+								rAsset.blockedWallCells.Remove(pos);
 						}
 					}
 				}
@@ -147,20 +181,13 @@ namespace EditorCustomRooms
 				else
 					rAsset.secretCells = new List<IntVector2>(lvlAsset.rooms[idx].secretCells);
 
-				for (int i = 0; i < rAsset.basicObjects.Count; i++)
-				{
-					var obj = rAsset.basicObjects[i];
-					if (obj.prefab.name == "lightSpotMarker")
-					{
-						rAsset.basicObjects.RemoveAt(i--);
-						rAsset.standardLightCells.Add(IntVector2.GetGridPosition(obj.position));
-					}
-				}
+				
 
 				rAsset.type = lvlAsset.rooms[idx].type;
 
 				rAsset.name = $"Room_{rAsset.category}_{Path.GetFileNameWithoutExtension(path)}";
 				((UnityEngine.Object)rAsset).name = rAsset.name;
+
 
 				if (existingContainer)
 				{
