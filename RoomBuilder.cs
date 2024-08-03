@@ -69,7 +69,7 @@ namespace EditorCustomRooms
 				}
 				catch (Exception e)
 				{
-					Debug.LogWarning("Failed to load a room coming from the cbld: " + name);
+					Debug.LogWarning("Failed to load a room coming from the cbld: " + path);
 					Debug.LogException(e);
 				}
 				finally
