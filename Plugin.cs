@@ -4,15 +4,17 @@ using EditorCustomRooms.Patches;
 using HarmonyLib;
 using MTM101BaldAPI;
 using MTM101BaldAPI.AssetTools;
-//using MTM101BaldAPI.Registers;
-//using System;
-//using System.Linq;
+#if DEBUG
+using MTM101BaldAPI.Registers;
+using System;
+using System.Linq;
+#endif
 using UnityEngine;
 using PlusLevelLoader;
 
 namespace EditorCustomRooms.BasePlugin
 {
-	[BepInPlugin("pixelguy.pixelmodding.baldiplus.editorcustomrooms", PluginInfo.PLUGIN_NAME, "1.0.4.2")]
+	[BepInPlugin("pixelguy.pixelmodding.baldiplus.editorcustomrooms", PluginInfo.PLUGIN_NAME, "1.0.4.3")]
 	[BepInDependency("mtm101.rulerp.bbplus.baldidevapi", BepInDependency.DependencyFlags.HardDependency)]
 	[BepInDependency("mtm101.rulerp.baldiplus.levelloader", BepInDependency.DependencyFlags.HardDependency)]
 	[BepInDependency("mtm101.rulerp.baldiplus.leveleditor", BepInDependency.DependencyFlags.SoftDependency)]
@@ -23,27 +25,29 @@ namespace EditorCustomRooms.BasePlugin
 			Harmony h = new("pixelguy.pixelmodding.baldiplus.editorcustomrooms");
 
 			// For debug purposes
-			//LoadingEvents.RegisterOnAssetsLoaded(Info, () =>
-			//{
-			//	try
-			//	{
-			//		var r = RoomFactory.CreateAssetFromPath(System.IO.Path.Combine(AssetLoader.GetModPath(this), "test.cbld"), 200, false, null, false, false, null, false, true);
-			//		Resources.FindObjectsOfTypeAll<LevelObject>().Do(x =>
-			//		{
+#if DEBUG
+			LoadingEvents.RegisterOnAssetsLoaded(Info, () =>
+			{
+				try
+				{
+					var r = RoomFactory.CreateAssetsFromPath(System.IO.Path.Combine(AssetLoader.GetModPath(this), "test.cbld"), 200, false, null, false, false, null, false, true);
+					Resources.FindObjectsOfTypeAll<LevelObject>().Do(x =>
+					{
 
-			//			var ld = x.roomGroup.FirstOrDefault(x => x.name == "Class");
-			//			if (ld != null)
-			//			{
-			//				ld.potentialRooms = ld.potentialRooms.AddToArray(new() { selection = r, weight = 9999999 });
-			//			}
-			//		});
-			//	}
-			//	catch (Exception e)
-			//	{
-			//		Debug.LogException(e);
-			//		Debug.LogWarning("Editor custom rooms has thrown a crash log for failing to load the test room");
-			//	}
-			//}, false);
+						var ld = x.roomGroup.FirstOrDefault(x => x.name == "Class");
+						if (ld != null)
+						{
+							ld.potentialRooms = ld.potentialRooms.AddRangeToArray([.. r.ConvertAll(x => new WeightedRoomAsset() { selection = x, weight = 9999999 })]);
+						}
+					});
+				}
+				catch (Exception e)
+				{
+					Debug.LogException(e);
+					Debug.LogWarning("Editor custom rooms has thrown a crash log for failing to load the test room");
+				}
+			}, false);
+#endif
 
 			h.Patch(AccessTools.EnumeratorMoveNext(AccessTools.Method(typeof(PlusLevelLoaderPlugin), "OnAssetsLoaded")),
 				null, new(typeof(Plugin).GetMethod("Postfix", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic))); // Manual patch that HAS to work without the editor

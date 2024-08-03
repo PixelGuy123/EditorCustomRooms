@@ -6,7 +6,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using UnityEngine;
-using UnityEngine.UIElements;
 
 namespace EditorCustomRooms
 {
@@ -31,16 +30,64 @@ namespace EditorCustomRooms
 		/// <param name="squaredShape">If True, the room will (internally) turn into a square shape. This is highly recommended for loading Special Rooms.</param>
 		/// <returns>A new instance of a <see cref="RoomAsset"/></returns>
 		/// <exception cref="ArgumentException"></exception>
+		[Obsolete("Use RoomFactory.CreateAssetsFromPath() instead")]
 		public static RoomAsset CreateAssetFromPath(string path, int maxItemValue, bool isOffLimits, RoomFunctionContainer existingContainer = null, bool isAHallway = false, bool isASecretRoom = false, Texture2D mapBg = null, bool keepTextures = true, bool squaredShape = false)
 		{
+			var a = CreateAssetsFromPath(path, maxItemValue, isOffLimits, existingContainer, isAHallway, isASecretRoom, mapBg, keepTextures, squaredShape);
+			return a.Count == 0 ? null : a[0];
+		}
+		/// <summary>
+		/// Creates a collection of <see cref="RoomAsset"/> objects based on the .cbld file provided.
+		/// </summary>
+		/// <param name="path">The path to the required .cbld file.</param>
+		/// <param name="maxItemValue">The maximum starting value of the room to "afford" an item to appear inside the room.</param>
+		/// <param name="isOffLimits">If the room is off limits (for example, an elevator).</param>
+		/// <param name="existingContainer">The <see cref="RoomFunctionContainer"/> of a RoomAsset. Generally, every BB+ room points to a single Container of their collection, for example, Faculty has a single container shared to every asset that is supposed to be a faculty. Leaving this null will result in the creation of a unique container for the room.
+		/// <para>If the asset shouldn't have a container, it can be manually destroyed after the creation of the RoomAsset.</para>
+		/// </param>
+		/// <param name="isAHallway">If True, the asset will follow specific parameters to match a hallway format.</param>
+		/// <param name="isASecretRoom">If True, every tile in the room will be marked as secret. Like the Mystery Room.</param>
+		/// <param name="mapBg">The background image that appears over the room in the Advanced Map. Leaving null will make the asset use the default map material, with no background animation.</param>
+		/// <param name="keepTextures">If True, when passed to the generator, it won't change its textures if it's a potential classroom/faculty/office type.</param>
+		/// <param name="squaredShape">If True, the room will (internally) turn into a square shape. This is highly recommended for loading Special Rooms.</param>
+		/// <returns>A new instance of a <see cref="RoomAsset"/></returns>
+		/// <exception cref="ArgumentException"></exception>
+		public static List<RoomAsset> CreateAssetsFromPath(string path, int maxItemValue, bool isOffLimits, RoomFunctionContainer existingContainer = null, bool isAHallway = false, bool isASecretRoom = false, Texture2D mapBg = null, bool keepTextures = true, bool squaredShape = false)
+		{
+			if (Path.GetExtension(path) != ".cbld")
+				throw new ArgumentException("Path has invalid extension: " + path);
 
-			int idx = isAHallway ? 0 : 1;
-
-			RoomAsset rAsset;
+			List<RoomAsset> assets = [];
 			using (BinaryReader reader = new(File.OpenRead(path)))
 			{
 				var lvlAsset = CustomLevelLoader.LoadLevelAsset(LevelExtensions.ReadLevel(reader));
-				rAsset = ScriptableObject.CreateInstance<RoomAsset>();
+				string name = Path.GetFileNameWithoutExtension(path);
+
+				try
+				{
+					assets = GetAssetsFromLevelAsset(lvlAsset, name, isAHallway ? 0 : 1, isAHallway ? 1 : lvlAsset.rooms.Count, maxItemValue, isOffLimits, existingContainer, isASecretRoom, mapBg, keepTextures, squaredShape);
+				}
+				catch (Exception e)
+				{
+					Debug.LogWarning("Failed to load a room coming from the cbld: " + name);
+					Debug.LogException(e);
+				}
+				finally
+				{
+					UnityEngine.Object.Destroy(lvlAsset); // Remove the created level asset from memory
+				}
+				
+			}
+			return assets;
+		}
+
+
+		internal static List<RoomAsset> GetAssetsFromLevelAsset(LevelAsset lvlAsset, string roomname, int minRoomRange, int maxRoomRange, int maxItemValue, bool isOffLimits, RoomFunctionContainer existingContainer = null, bool isASecretRoom = false, Texture2D mapBg = null, bool keepTextures = true, bool squaredShape = false)
+		{
+			List<RoomAsset> assets = [];
+			for (int idx = minRoomRange; idx < maxRoomRange; idx++)
+			{
+				var rAsset = ScriptableObject.CreateInstance<RoomAsset>();
 
 
 
@@ -52,6 +99,8 @@ namespace EditorCustomRooms
 				rAsset.basicObjects = new List<BasicObjectData>(lvlAsset.rooms[idx].basicObjects);
 				rAsset.blockedWallCells = new List<IntVector2>(lvlAsset.rooms[idx].blockedWallCells);
 				rAsset.category = lvlAsset.rooms[idx].category;
+				rAsset.type = lvlAsset.rooms[idx].type;
+				bool isAHallway = rAsset.type == RoomType.Hall;
 
 				IntVector2 biggestSize = default;
 				IntVector2 posOffset = new(lvlAsset.levelSize.x, lvlAsset.levelSize.z);
@@ -110,12 +159,9 @@ namespace EditorCustomRooms
 				rAsset.maxItemValue = maxItemValue;
 				rAsset.offLimits = isOffLimits;
 
-				for (int i = 0; i < rAsset.basicObjects.Count; i++)
-					rAsset.basicObjects[i].position -= worldPosOffset;
-				for (int i = 0; i < rAsset.blockedWallCells.Count; i++)
-					rAsset.blockedWallCells[i] -= posOffset;
-				for (int i = 0; i < rAsset.items.Count; i++)
-					rAsset.items[i].position -= new Vector2(worldPosOffset.x, worldPosOffset.z);
+				rAsset.basicObjects.ForEach(x => x.position -= worldPosOffset);
+				rAsset.blockedWallCells.ForEach(x => x -= posOffset);
+				rAsset.items.ForEach(x => x.position -= new Vector2(worldPosOffset.x, worldPosOffset.z));
 				rAsset.activity.position -= worldPosOffset;
 
 				// other markers here
@@ -140,7 +186,7 @@ namespace EditorCustomRooms
 								rAsset.eventSafeCells.Remove(pos);
 							}
 							rAsset.basicObjects.RemoveAt(i--);
-						break;
+							break;
 						default: break;
 					}
 				}
@@ -174,18 +220,16 @@ namespace EditorCustomRooms
 						}
 					}
 				}
-
 				rAsset.requiredDoorPositions = new List<IntVector2>(lvlAsset.rooms[idx].requiredDoorPositions); // It seems required has a higher priority than forced, but has no apparent difference
 				if (isASecretRoom) // secret room :O
 					rAsset.secretCells.AddRange(rAsset.cells.Select(x => x.pos));
 				else
 					rAsset.secretCells = new List<IntVector2>(lvlAsset.rooms[idx].secretCells);
 
-				
 
-				rAsset.type = lvlAsset.rooms[idx].type;
 
-				rAsset.name = $"Room_{rAsset.category}_{Path.GetFileNameWithoutExtension(path)}";
+
+				rAsset.name = $"Room_{rAsset.category}_{roomname}{(maxRoomRange >= 2 ? string.Empty : idx)}";
 				((UnityEngine.Object)rAsset).name = rAsset.name;
 
 
@@ -200,6 +244,7 @@ namespace EditorCustomRooms
 					roomFunctionContainer.gameObject.ConvertToPrefab(true);
 
 					rAsset.roomFunctionContainer = roomFunctionContainer;
+					existingContainer = roomFunctionContainer;
 				}
 
 				if (mapBg != null)
@@ -212,7 +257,7 @@ namespace EditorCustomRooms
 				else if (isAHallway)
 					rAsset.mapMaterial = null; // hallways have no material
 
-				if (squaredShape && biggestSize.z > 0 && biggestSize.x > 0 && !isAHallway) // Fillup empty spots
+				if (!isAHallway && squaredShape && biggestSize.z > 0 && biggestSize.x > 0) // Fillup empty spots
 				{
 					for (int x = 0; x <= biggestSize.x; x++)
 					{
@@ -227,11 +272,10 @@ namespace EditorCustomRooms
 						}
 					}
 				}
-
-				UnityEngine.Object.Destroy(lvlAsset); // Remove the created level asset from memory
+				assets.Add(rAsset);
 			}
-			return rAsset;
+			return assets;
 		}
-
 	}
+
 }
