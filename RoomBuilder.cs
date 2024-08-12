@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using UnityEngine;
+using UnityEngine.UIElements;
 
 namespace EditorCustomRooms
 {
@@ -160,7 +161,9 @@ namespace EditorCustomRooms
 				rAsset.offLimits = isOffLimits;
 
 				rAsset.basicObjects.ForEach(x => x.position -= worldPosOffset);
-				rAsset.blockedWallCells.ForEach(x => x -= posOffset);
+				for (int i = 0; i < rAsset.blockedWallCells.Count; i++)
+					rAsset.blockedWallCells[i] -= posOffset;
+				//rAsset.blockedWallCells.ForEach(x => x -= posOffset); // ForEach doesn't change the value passed directly? Only fields? Huh
 				rAsset.items.ForEach(x => x.position -= new Vector2(worldPosOffset.x, worldPosOffset.z));
 				rAsset.activity.position -= worldPosOffset;
 
@@ -224,7 +227,11 @@ namespace EditorCustomRooms
 				if (isASecretRoom) // secret room :O
 					rAsset.secretCells.AddRange(rAsset.cells.Select(x => x.pos));
 				else
+				{
 					rAsset.secretCells = new List<IntVector2>(lvlAsset.rooms[idx].secretCells);
+					for (int i = 0; i < rAsset.secretCells.Count; i++)
+						rAsset.secretCells[i] -= posOffset;
+				}
 
 
 
