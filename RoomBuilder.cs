@@ -6,7 +6,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using UnityEngine;
-using UnityEngine.UIElements;
 
 namespace EditorCustomRooms
 {
@@ -262,7 +261,27 @@ namespace EditorCustomRooms
 					rAsset.mapMaterial.name = rAsset.name;
 				}
 				else if (isAHallway)
+				{
 					rAsset.mapMaterial = null; // hallways have no material
+					if (rAsset.potentialDoorPositions.Count == 0) 
+					{
+						foreach (var cell in rAsset.cells) // Basically reach all the border cells and make them potential spots for the hallways to attach to (as required by 0.9+ standards)
+						{
+							bool touchesBorder = false;
+							for (int i = 0; i < 4; i++)
+							{
+								var pos = cell.pos + ((Direction)i).ToIntVector2();
+								if (!rAsset.cells.Any(x => x.pos == pos))
+								{
+									touchesBorder = true;
+									break;
+								}
+							}
+							if (touchesBorder)
+								rAsset.potentialDoorPositions.Add(cell.pos);
+						}
+					}
+				}
 
 				if (!isAHallway && squaredShape && biggestSize.z > 0 && biggestSize.x > 0) // Fillup empty spots
 				{
