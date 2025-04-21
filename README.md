@@ -1,4 +1,4 @@
-This is a BepInEx plugin especifically made for BB+ 0.5.2+<br>
+This is a BepInEx plugin especifically made for BB+ 0.10.x (still works for older versions)<br>
 This mod depends on:<br>
 https://gamebanana.com/mods/383711 <- MTM101BaldDevAPI<br>
 https://gamebanana.com/mods/508477 <- Level Loader<br>

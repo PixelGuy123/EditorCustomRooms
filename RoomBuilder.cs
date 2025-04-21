@@ -96,8 +96,8 @@ namespace EditorCustomRooms
 				// There should be only a single room per level asset (only uses rooms[idx])
 
 				rAsset.activity = lvlAsset.rooms[idx].activity.GetNew();
-				rAsset.basicObjects = new List<BasicObjectData>(lvlAsset.rooms[idx].basicObjects);
-				rAsset.blockedWallCells = new List<IntVector2>(lvlAsset.rooms[idx].blockedWallCells);
+				rAsset.basicObjects = [.. lvlAsset.rooms[idx].basicObjects];
+				rAsset.blockedWallCells = [.. lvlAsset.rooms[idx].blockedWallCells];
 				rAsset.category = lvlAsset.rooms[idx].category;
 				rAsset.type = lvlAsset.rooms[idx].type;
 				bool isAHallway = rAsset.type == RoomType.Hall;
@@ -142,14 +142,14 @@ namespace EditorCustomRooms
 				rAsset.color = lvlAsset.rooms[idx].color;
 				rAsset.doorMats = lvlAsset.rooms[idx].doorMats;
 
-				rAsset.entitySafeCells = new List<IntVector2>(posList);
-				rAsset.eventSafeCells = new List<IntVector2>(posList); // Ignore editor's implementation of this, it's horrible and the green marker should work better
+				rAsset.entitySafeCells = [.. posList];
+				rAsset.eventSafeCells = [.. posList]; // Ignore editor's implementation of this, it's horrible and the green marker should work better
 
 
-				rAsset.forcedDoorPositions = new List<IntVector2>(lvlAsset.rooms[idx].forcedDoorPositions);
+				rAsset.forcedDoorPositions = [.. lvlAsset.rooms[idx].forcedDoorPositions];
 				rAsset.hasActivity = lvlAsset.rooms[idx].hasActivity;
-				rAsset.itemList = new List<WeightedItemObject>(lvlAsset.rooms[idx].itemList);
-				rAsset.items = new List<ItemData>(lvlAsset.rooms[idx].items);
+				rAsset.itemList = [.. lvlAsset.rooms[idx].itemList];
+				rAsset.items = [.. lvlAsset.rooms[idx].items];
 
 				rAsset.keepTextures = keepTextures;
 				rAsset.ceilTex = lvlAsset.rooms[idx].ceilTex;
@@ -222,12 +222,12 @@ namespace EditorCustomRooms
 						}
 					}
 				}
-				rAsset.requiredDoorPositions = new List<IntVector2>(lvlAsset.rooms[idx].requiredDoorPositions); // It seems required has a higher priority than forced, but has no apparent difference
+				rAsset.requiredDoorPositions = [.. lvlAsset.rooms[idx].requiredDoorPositions]; // It seems required has a higher priority than forced, but has no apparent difference
 				if (isASecretRoom) // secret room :O
 					rAsset.secretCells.AddRange(rAsset.cells.Select(x => x.pos));
 				else
 				{
-					rAsset.secretCells = new List<IntVector2>(lvlAsset.rooms[idx].secretCells);
+					rAsset.secretCells = [.. lvlAsset.rooms[idx].secretCells];
 					for (int i = 0; i < rAsset.secretCells.Count; i++)
 						rAsset.secretCells[i] -= posOffset;
 				}
