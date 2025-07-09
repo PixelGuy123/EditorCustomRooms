@@ -1,10 +1,10 @@
-﻿using MTM101BaldAPI;
-using PlusLevelFormat;
-using PlusLevelLoader;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using MTM101BaldAPI;
+using PlusLevelFormat;
+using PlusLevelLoader;
 using UnityEngine;
 
 namespace EditorCustomRooms
@@ -30,7 +30,7 @@ namespace EditorCustomRooms
 		/// <param name="squaredShape">If True, the room will (internally) turn into a square shape. This is highly recommended for loading Special Rooms.</param>
 		/// <returns>A new instance of a <see cref="RoomAsset"/></returns>
 		/// <exception cref="ArgumentException"></exception>
-		[Obsolete("Use RoomFactory.CreateAssetsFromPath() instead")]
+		[Obsolete("Use RoomFactory.CreateAssetsFromPath() instead. This will be removed in 2.0.0.")]
 		public static RoomAsset CreateAssetFromPath(string path, int maxItemValue, bool isOffLimits, RoomFunctionContainer existingContainer = null, bool isAHallway = false, bool isASecretRoom = false, Texture2D mapBg = null, bool keepTextures = true, bool squaredShape = false)
 		{
 			var a = CreateAssetsFromPath(path, maxItemValue, isOffLimits, existingContainer, isAHallway, isASecretRoom, mapBg, keepTextures, squaredShape);
@@ -76,7 +76,7 @@ namespace EditorCustomRooms
 				{
 					UnityEngine.Object.Destroy(lvlAsset); // Remove the created level asset from memory
 				}
-				
+
 			}
 			return assets;
 		}
@@ -88,8 +88,6 @@ namespace EditorCustomRooms
 			for (int idx = minRoomRange; idx < maxRoomRange; idx++)
 			{
 				var rAsset = ScriptableObject.CreateInstance<RoomAsset>();
-
-
 
 				// **************** Load Room Asset Data **************
 				// Note, everything must be stored as value, not reference; LevelAssets will be destroyed afterwards
@@ -235,7 +233,7 @@ namespace EditorCustomRooms
 
 
 
-				rAsset.name = $"Room_{rAsset.category}_{roomname}{(maxRoomRange >= 2 ? string.Empty : idx)}";
+				rAsset.name = TreatRepeatedName($"Room_{rAsset.category}_{roomname}{(maxRoomRange >= 2 ? string.Empty : idx)}");
 				((UnityEngine.Object)rAsset).name = rAsset.name;
 
 
@@ -263,7 +261,7 @@ namespace EditorCustomRooms
 				else if (isAHallway)
 				{
 					rAsset.mapMaterial = null; // hallways have no material
-					if (rAsset.potentialDoorPositions.Count == 0) 
+					if (rAsset.potentialDoorPositions.Count == 0)
 					{
 						foreach (var cell in rAsset.cells) // Basically reach all the border cells and make them potential spots for the hallways to attach to (as required by 0.9+ standards)
 						{
@@ -302,6 +300,17 @@ namespace EditorCustomRooms
 			}
 			return assets;
 		}
+
+		internal static string TreatRepeatedName(string originalName)
+		{
+			if (_repeatedNames.ContainsKey(originalName))
+			{
+				return originalName + $"_{++_repeatedNames[originalName]}"; // Adds the value before concating the string
+			}
+			_repeatedNames.Add(originalName, 1);
+			return originalName;
+		}
+		readonly static Dictionary<string, int> _repeatedNames = [];
 	}
 
 }
